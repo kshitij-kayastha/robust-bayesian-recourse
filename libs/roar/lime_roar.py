@@ -2,6 +2,8 @@ import numpy as np
 from libs.explainers.lime_wrapper import LimeWrapper
 from libs.roar.linear_roar import LinearROAR
 from sklearn.utils import check_random_state
+from libs.roar.alg1 import LAROAR
+from libs.roar.alg1l1 import L1Recourse
 
 
 def generate_recourse(x0, model, random_state, params=dict()):
@@ -15,11 +17,20 @@ def generate_recourse(x0, model, random_state, params=dict()):
 
     explainer = LimeWrapper(train_data, class_names=["0", "1"], discretize_continuous=False, random_state=rng)
 
-    w, b = explainer.explain_instance(x0, model.predict_proba, num_samples=ec.num_samples)
+    # w, b = explainer.explain_instance(x0, model.predict_proba, num_samples=ec.num_samples)
+    w = model.out.weight.data.detach().double().numpy()[0]
+    b = model.out.bias.data.detach().double().numpy()[0]
 
-    arg = LinearROAR(
+    # arg = LinearROAR(
+    #     train_data, w, b, cat_indices, lambd=0.3, dist_type=1, lr=0.01, delta_max=delta_max, max_iter=1000
+    # )
+    # arg = LAROAR(
+    #     train_data, w, b, cat_indices, lambd=0.3, dist_type=1, lr=0.01, delta_max=delta_max, max_iter=1000
+    # )
+    arg = L1Recourse(
         train_data, w, b, cat_indices, lambd=0.1, dist_type=1, lr=0.01, delta_max=delta_max, max_iter=1000
     )
+    
     x_ar = arg.fit_instance(x0, verbose=False)
     report = dict(feasible=arg.feasible)
 

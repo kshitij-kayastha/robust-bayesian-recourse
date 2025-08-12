@@ -19,7 +19,7 @@ def generate_recourse(x0, model, random_state, params=dict()):
     w, b = explainer.explain_instance(x0, perturb_radius=perturb_radius * ec.max_distance, num_samples=ec.num_samples)
 
     arg = LinearROAR(
-        train_data, w, b, cat_indices, lambd=0.1, dist_type=1, lr=0.01, delta_max=delta_max, max_iter=1000
+        train_data, w, b, cat_indices, lambd=0.3, dist_type=1, lr=0.01, delta_max=delta_max, max_iter=1000
     )
     x_ar = arg.fit_instance(x0, verbose=False)
     report = dict(feasible=arg.feasible)

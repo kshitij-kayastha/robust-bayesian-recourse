@@ -3,7 +3,7 @@ import copy
 import itertools
 import os
 from collections import defaultdict, namedtuple
-
+from time import time
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,6 +18,7 @@ from expt.common import (
 )
 from expt.expt_config import Expt5
 from matplotlib.ticker import FormatStrFormatter
+import matplotlib.colors as mcolors
 from sklearn.model_selection import KFold, ParameterGrid, train_test_split
 from tqdm import tqdm
 from utils import helpers
@@ -57,11 +58,16 @@ param_to_vary = {
 def run(ec, wdir, dname, cname, mname, num_proc, seed, logger, start_index=None, num_ins=None, device="cpu"):
     # logger.info("Running dataset: %s, classifier: %s, method: %s...",
     # dname, cname, mname)
+    t_start = time()
     print("Running dataset: %s, classifier: %s, method: %s..." % (dname, cname, mname))
 
     df, _ = helpers.get_dataset(dname, params=synthetic_params)
+    print(df.columns)
+    print(len(df.columns))
     y = df["label"].to_numpy()
     X_df = df.drop("label", axis=1)
+    # y = df["credit_risk"].to_numpy()
+    # X_df = df.drop("credit_risk", axis=1)
     transformer = get_transformer(dname)
     X = transformer.transform(X_df)
     if not type(X) is np.ndarray:
@@ -69,7 +75,7 @@ def run(ec, wdir, dname, cname, mname, num_proc, seed, logger, start_index=None,
     cat_indices = transformer.cat_indices
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.8, random_state=42, stratify=y)
-
+    
     enriched_data = enrich_training_data(5000, X_train, cat_indices, seed)
 
     cur_models = load_models(dname, cname, ec.kfold, wdir)
@@ -96,7 +102,11 @@ def run(ec, wdir, dname, cname, mname, num_proc, seed, logger, start_index=None,
     res["cost"] = []
     res["cur_vald"] = []
     res["fut_vald"] = []
+    res["wc_vald"] = []
     res["feasible"] = []
+    res["x_0"] = []
+    res["x_r"] = []
+    res["theta_0"] = []
 
     x_train_max_dist = compute_max_distance(X_train)
 
@@ -146,59 +156,90 @@ def run(ec, wdir, dname, cname, mname, num_proc, seed, logger, start_index=None,
 
         for idx, x0 in enumerate(uds_X):
             jobs_args.append((idx, method, x0, model, shifted_models, seed, logger, params))
-
         with tqdm_joblib(tqdm(desc="Running recourse method", total=len(jobs_args))) as _:
             rets = joblib.Parallel(n_jobs=num_proc, prefer="threads")(
                 joblib.delayed(_run_single_instance)(*jobs_args[i]) for i in range(len(jobs_args))
             )
-
+        
         # rets = []
-        # for idx, x0 in enumerate(uds_X):
-        #     t_start = time()
-        #     # print("run with params {}".format(grid[pid]))
-        #     # print(f'run_single_instance id={idx}')
+        # for idx, x0 in enumerate(uds_X[:10]):
         #     ret = _run_single_instance(*jobs_args[idx])
+        #     ttz += (time() - t_start)
         #     rets.append(ret)
-        #     print(f'Finished {idx+1} / {len(uds_X)} | Time elapsed: {(time() - t_start):.4f} seconds')
-
+            
+            # print(f'Finished {idx+1} / {len(uds_X)} | Time elapsed: {(time() - t_start):.4f} seconds')
         l1_cost = []
         cur_vald = []
         fut_vald = []
         feasible = []
+        x_0s = []
+        x_rs = []
+        theta_0s = []
 
         for ret in rets:
             l1_cost.append(ret.l1_cost)
             cur_vald.append(ret.cur_vald)
             fut_vald.append(ret.fut_vald)
             feasible.append(ret.feasible)
+            x_0s.append(ret.x_0)
+            x_rs.append(ret.x_r)
+            theta_0s.append(ret.theta_0)
 
         res["cost"].append(np.array(l1_cost))
         res["cur_vald"].append(np.array(cur_vald))
         res["fut_vald"].append(np.array(fut_vald))
         res["feasible"].append(np.array(feasible))
+        res["x_0"].append(x_0s)
+        res["x_r"].append(x_rs)
+        # res["theta_0"] = theta_0s
+        res["theta_0"] = theta_0s[0]
+        ttz = (time() - t_start)
+        print(f"{mname} {dname} {pid} time: {ttz/10}", file=open("timelog.txt", "a"))
 
     helpers.pdump(res, f"{cname}_{dname}_{mname}.pickle", wdir)
 
     logger.info("Done dataset: %s, classifier: %s, method: %s!", dname, cname, mname)
+    
 
 
 label_map = {
     "fut_vald": "Future Validity",
     "cur_vald": "Current Validity",
+    "wc_vald": "Worst Case Validity",
     "cost": "Cost",
 }
 
 
 def plot_5(ec, wdir, cname, dname, methods):
+    methods = ['limels_roar', 'rbr', 'lime_roar']
+    # methods = ['limels_roar', 'rbr', 'lime_roar_lamb0.05', 'lime_roar_lamb0.1', 'lime_roar_lamb0.2', 'lime_roar_lamb0.5', 'lime_roar_lamb1.0']
+    method_name_map2 = {
+        'wachter': 'Wachter',
+        'limels_roar': 'LIMELS-ROAR',
+        'lime_roar': 'Alg1',
+        # 'lime_roar_lamb0.05': 'Alg1 (λ=0.05)',
+        # 'lime_roar_lamb0.1': 'Alg1 (λ=0.1)',
+        # 'lime_roar_lamb0.2': 'Alg1 (λ=0.2)',
+        # 'lime_roar_lamb0.5': 'Alg1 (λ=0.5)',
+        # 'lime_roar_lamb1.0': 'Alg1 (λ=1.0)',
+        'rbr': 'RBR'
+    }
+    
     def plot(methods, x_label, y_label, data):
         plt.rcParams.update({"font.size": 20})
+        plt.style.use('seaborn-v0_8')
         fig, ax = plt.subplots()
-        marker = reversed(["*", "v", "^", "o", (5, 1), (5, 0), "+", "s"])
+        # marker = reversed(["*", "v", "^", "o", (5, 1), (5, 0), "+", "s"])
+        marker = reversed(["s", "v", "^", "o", "s", (5, 0), "P", "*"])
+        prop_cycle = plt.rcParams['axes.prop_cycle']
+        colors = prop_cycle.by_key()['color'][1:]
         iter_marker = itertools.cycle(marker)
 
+        aa = 0
         for mname in methods:
             x, y = find_pareto(data[mname][x_label], data[mname][y_label])
-            ax.plot(x, y, marker=next(iter_marker), label=method_name_map[mname], alpha=0.8)
+            ax.plot(x, y, marker=next(iter_marker), label=method_name_map2[mname], alpha=0.8, color=colors[aa%len(colors)])
+            aa += 1
 
         ax.set_ylabel(label_map[y_label])
         ax.set_xlabel(label_map[x_label])
@@ -223,6 +264,7 @@ def plot_5(ec, wdir, cname, dname, methods):
             data[mname]["cur_vald"].append(np.mean(res["cur_vald"][i]))
 
     print(data["rbr"])
+    plot(methods, "cost", "wc_vald", data)
     plot(methods, "cost", "fut_vald", data)
     plot(methods, "cost", "cur_vald", data)
 
@@ -259,11 +301,13 @@ def plot_5_1(ec, wdir, cname, datasets, methods):
             data[dname][mname]["params"] = res["params"]
             data[dname][mname]["delta_max"] = res["delta_max_df"]
             data[dname][mname]["cost"] = []
+            data[dname][mname]["wc_vald"] = []
             data[dname][mname]["fut_vald"] = []
             data[dname][mname]["cur_vald"] = []
 
             for i in range(len(res["params"])):
                 data[dname][mname]["cost"].append(np.mean(res["cost"][i]))
+                data[dname][mname]["wc_vald"].append(np.mean(res["wc_vald"][i]))
                 data[dname][mname]["fut_vald"].append(np.mean(res["fut_vald"][i]))
                 data[dname][mname]["cur_vald"].append(np.mean(res["cur_vald"][i]))
 
@@ -275,7 +319,7 @@ def plot_5_1(ec, wdir, cname, datasets, methods):
     if num_ds == 1:
         axs = axs.reshape(-1, 1)
 
-    metrics = ["cur_vald", "fut_vald"]
+    metrics = ["cur_vald", "fut_vald", "wc_vald"]
 
     for i in range(num_ds):
         for j in range(len(metrics)):

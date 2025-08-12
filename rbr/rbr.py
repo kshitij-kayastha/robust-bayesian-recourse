@@ -169,6 +169,7 @@ class RBR(object):
                 break
 
             with torch.no_grad():
+                # x_new = x_t - 1e-3 * x_t.grad
                 x_new = x_t - 1 / torch.sqrt(torch.tensor(1e3, device=self.device)) * x_t.grad
                 if verbose:
                     if x_new.shape[0] == 2:
@@ -279,7 +280,7 @@ def generate_recourse(x0, model, random_state, params=dict()):
 
     ec = params["config"]
     arg = RBR(model, train_data, num_cfacts=1000, max_iter=500, random_state=random_state, device=params["device"])
-
+    
     x_ar = arg.fit_instance(
         x0,
         ec.num_samples,
@@ -291,5 +292,5 @@ def generate_recourse(x0, model, random_state, params=dict()):
         ec,
     )
     report = dict(feasible=arg.feasible)
-
+    
     return x_ar, report

@@ -7,7 +7,7 @@ import sklearn
 import sklearn.preprocessing
 from lime import explanation
 from lime.lime_tabular import LimeTabularExplainer, TableDomainMapper
-from pyDOE2 import lhs
+# from pyDOE2 import lhs
 from scipy.stats.distributions import norm
 
 
@@ -56,13 +56,13 @@ class LimeWrapper(LimeTabularExplainer):
             if sampling_method == "gaussian":
                 data = random_state.normal(0, 1, num_samples * num_cols).reshape(num_samples, num_cols)
                 data = np.array(data)
-            elif sampling_method == "lhs":
-                data = lhs(num_cols, samples=num_samples).reshape(num_samples, num_cols)
-                means = np.zeros(num_cols)
-                stdvs = np.array([1] * num_cols)
-                for i in range(num_cols):
-                    data[:, i] = norm(loc=means[i], scale=stdvs[i]).ppf(data[:, i])
-                data = np.array(data)
+            # elif sampling_method == "lhs":
+            #     data = lhs(num_cols, samples=num_samples).reshape(num_samples, num_cols)
+            #     means = np.zeros(num_cols)
+            #     stdvs = np.array([1] * num_cols)
+            #     for i in range(num_cols):
+            #         data[:, i] = norm(loc=means[i], scale=stdvs[i]).ppf(data[:, i])
+            #     data = np.array(data)
             else:
                 warnings.warn(
                     """Invalid input for sampling_method.

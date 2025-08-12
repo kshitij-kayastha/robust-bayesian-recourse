@@ -26,6 +26,7 @@ class Expt5(Config):
         "german": 0.2,
         "sba": 0.2,
         "gmc": 0.2,
+        "income": 0.2,
     }
 
     params_to_vary = {

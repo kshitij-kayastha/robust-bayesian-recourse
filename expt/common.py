@@ -3,16 +3,18 @@ from collections import namedtuple
 
 import numpy as np
 import torch
+import torch.optim as optim
 from classifiers import mlp
-from libs.roar import lime_roar, limels_roar
+from libs.roar import lime_roar, limels_roar, alg1
 from libs.wachter import wachter
 from rbr import rbr
 from sklearn.utils import check_random_state
 from utils import helpers
 from utils.funcs import lp_dist
+from copy import deepcopy
 
-
-Results = namedtuple("Results", ["l1_cost", "cur_vald", "fut_vald", "feasible"])
+# Results = namedtuple("Results", ["l1_cost", "cur_vald", "fut_vald", "feasible"])
+Results = namedtuple("Results", ["l1_cost", "cur_vald", "fut_vald", "feasible", "x_0", "x_r", "theta_0"])
 
 
 def to_numpy_array(lst):
@@ -46,7 +48,7 @@ def enrich_training_data(num_samples, train_data, cat_indices, rng):
 
         new_data[:, cat_indices] = new_data[:, cat_indices] >= 0.5
 
-        new_data = np.vstack([train_data, new_data])
+        new_data = np.vstack([train_data,+ new_data])
     else:
         new_data = train_data[:num_samples]
     return new_data
@@ -54,9 +56,9 @@ def enrich_training_data(num_samples, train_data, cat_indices, rng):
 
 def to_mean_std(m, s, is_best):
     if is_best:
-        return "\\textbf{" + "{:.2f}".format(m) + "}" + " $\pm$ {:.2f}".format(s)
+        return "\\textbf{" + "{:.2f}".format(m) + "}" + " $\\pm$ {:.2f}".format(s)
     else:
-        return "{:.2f} $\pm$ {:.2f}".format(m, s)
+        return "{:.2f} $\\pm$ {:.2f}".format(m, s)
 
 
 def _run_single_instance(idx, method, x0, model, shifted_models, seed, logger, params=dict()):
@@ -71,11 +73,18 @@ def _run_single_instance(idx, method, x0, model, shifted_models, seed, logger, p
     l1_cost = lp_dist(x0, x_ar, p=1)
     cur_vald = model.predict(x_ar)
     fut_vald = calc_future_validity(x_ar, shifted_models)
+    
+    weights_0 = model.out.weight.data.detach()
+    bias_0 = model.out.bias.data.detach()
+    # theta_0 = (weights_0, bias_0)
+    
+    theta_0 = model.state_dict()
 
-    return Results(l1_cost, cur_vald, fut_vald, report["feasible"])
+    return Results(l1_cost, cur_vald, fut_vald, report["feasible"], x0, x_ar, theta_0)
 
 
-method_name_map = {"lime_roar": "LIME-ROAR", "limels_roar": "LIMELS-ROAR", "wachter": "Wachter", "rbr": "RBR"}
+# method_name_map = {"lime_roar": "LIME-ROAR", "limels_roar": "LIMELS-ROAR", "wachter": "Wachter", "rbr": "RBR"}
+method_name_map = {"lime_roar": "Alg1", "limels_roar": "LIMELS-ROAR", "wachter": "Wachter", "rbr": "RBR"}
 
 
 dataset_name_map = {

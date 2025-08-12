@@ -8,10 +8,11 @@ from torch import optim
 class Net0(nn.Module):
     def __init__(self, n):
         super(Net0, self).__init__()
-        self.fc1 = nn.Linear(n, 20)
-        self.fc2 = nn.Linear(20, 50)
-        self.fc3 = nn.Linear(50, 20)
-        self.out = nn.Linear(20, 1)
+        # self.fc1 = nn.Linear(n, 20)
+        # self.fc2 = nn.Linear(20, 50)
+        # self.fc3 = nn.Linear(50, 20)
+        # self.out = nn.Linear(20, 1)
+        self.out = nn.Linear(n, 1)
 
         for p in self.parameters():
             if len(p.shape) > 1:
@@ -19,10 +20,11 @@ class Net0(nn.Module):
 
     def forward(self, x):
         # add hidden layer, with relu activation function
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        # x = F.relu(self.fc1(x))
+        # x = F.relu(self.fc2(x))
+        # x = F.relu(self.fc3(x))
         x = torch.sigmoid(self.out(x))
+        # x = torch.sigmoid(F.relu(self.out(x)))
         return x
 
     def predict_proba(self, inp):

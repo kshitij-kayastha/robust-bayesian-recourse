@@ -4,8 +4,11 @@ import torch.nn as nn
 
 
 def reconstruct_encoding_constraints(x, cat_pos):
+    # copy x
     x_enc = x.clone()
+    # for each categorical variable
     for pos in cat_pos:
+        # clamp to 0, 1
         x_enc.data[pos] = torch.clamp(torch.round(x_enc[pos]), 0, 1)
     return x_enc
 
@@ -49,8 +52,9 @@ class LinearROAR(object):
 
     def fit_instance(self, x_0, verbose=False):
         (d,) = x_0.shape
+        torch.manual_seed(0)
         x_0 = torch.tensor(x_0.copy()).float()
-        x_t = x_0.clone().detach().requires_grad_(True)
+        x_t = (x_0.clone().detach() + torch.rand(x_0.size())).requires_grad_(True)
         x_enc = reconstruct_encoding_constraints(x_t, self.cat_indices)
 
         w = torch.from_numpy(self.coef_.copy()).float()

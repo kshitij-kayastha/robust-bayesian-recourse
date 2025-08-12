@@ -50,7 +50,7 @@ def gen_synthetic_data_nl(
 
 def get_dataset(dataset="synthesis", params=list()):
     if "synthesis" in dataset:
-        if isinstance(params, collections.Sequence):
+        if isinstance(params, collections.abc.Sequence):
             params.append("shift" in dataset)
             dataset = gen_synthetic_data_nl(*params)
         else:
@@ -60,10 +60,10 @@ def get_dataset(dataset="synthesis", params=list()):
         numerical = list(dataset.columns)
         numerical.remove("label")
     elif "german" in dataset:
-        dataset = pd.read_csv("./data/corrected_german_small.csv" if "shift" in dataset else "./data/german_small.csv")
+        dataset = pd.read_csv("./data/corrected_german.csv" if "shift" in dataset else "./data/german.csv")[["duration", "amount", "age", "personal_status_sex", "label"]]
         # numerical = ['Duration', 'Credit amount', 'Installment rate',
         # 'Present residence', 'Age', 'Existing credits', 'Number people']
-        numerical = ["Duration", "Credit amount", "Age"]
+        numerical = ["duration", "amount", "age"]
     elif "sba" in dataset:
         dataset = pd.read_csv("./data/sba_8905.csv" if "shift" in dataset else "./data/sba_0614.csv")
         categorical = ["LowDoc", "RevLineCr", "NewExist", "MIS_Status", "UrbanRural", "label"]
@@ -84,6 +84,11 @@ def get_dataset(dataset="synthesis", params=list()):
             "NumberOfTime60-89DaysPastDueNotWorse",
             "NumberOfDependents",
         ]
+    elif "income" in dataset:
+        categorical = ['COW','MAR', 'POBP', 'RELP', 'RAC1P', 'SEX', 'PINCP']
+        numerical = ['AGEP', 'WKHP']
+        dataset = pd.read_csv("./data/income-reduced.csv")[numerical + categorical]
+        dataset = dataset.rename(columns={'PINCP': 'label'})
     else:
         raise ValueError("Unknown dataset")
 
@@ -96,22 +101,25 @@ def get_full_dataset(dataset="synthesis", params=list()):
         numerical = list(joint_dataset.columns)
         numerical.remove("label")
     elif "german" in dataset:
-        dataset = pd.read_csv("./data/german_small.csv")
-        shift_dataset = pd.read_csv("./data/corrected_german_small.csv")
-        joint_dataset = dataset.append(shift_dataset)
+        dataset = pd.read_csv("./data/german.csv")[["duration", "amount", "age", "personal_status_sex", "label"]]
+        shift_dataset = pd.read_csv("./data/corrected_german.csv")[["duration", "amount", "age", "personal_status_sex", "label"]]
+        # joint_dataset = dataset.append(shift_dataset)
+        joint_dataset = pd.concat((dataset, shift_dataset))
         # numerical = ['Duration', 'Credit amount', 'Installment rate',
         # 'Present residence', 'Age', 'Existing credits', 'Number people']
-        numerical = ["Duration", "Credit amount", "Age"]
+        numerical = ["duration", "amount", "age"]
     elif "sba" in dataset:
         dataset = pd.read_csv("./data/sba_0614.csv")
         shift_dataset = pd.read_csv("./data/sba_8905.csv")
-        joint_dataset = dataset.append(shift_dataset)
+        # joint_dataset = dataset.append(shift_dataset)
+        joint_dataset = pd.concat((dataset, shift_dataset))
         categorical = ["LowDoc", "RevLineCr", "NewExist", "MIS_Status", "UrbanRural", "label"]
         numerical = list(dataset.columns.difference(categorical))
     elif "gmc" in dataset:
         dataset = pd.read_csv("./data/gmc.csv").rename(columns={"SeriousDlqin2yrs": "label"})
         shift_dataset = pd.read_csv("./data/gmc_shift.csv").rename(columns={"SeriousDlqin2yrs": "label"})
-        joint_dataset = dataset.append(shift_dataset)
+        # joint_dataset = dataset.append(shift_dataset)
+        joint_dataset = pd.concat((dataset, shift_dataset))
         numerical = [
             "RevolvingUtilizationOfUnsecuredLines",
             "age",
@@ -124,6 +132,11 @@ def get_full_dataset(dataset="synthesis", params=list()):
             "NumberOfTime60-89DaysPastDueNotWorse",
             "NumberOfDependents",
         ]
+    elif "income" in dataset:
+        categorical = ['COW','MAR', 'POBP', 'RELP', 'RAC1P', 'SEX', 'PINCP']
+        numerical = ['AGEP', 'WKHP']
+        joint_dataset = pd.read_csv("./data/income-reduced.csv")[numerical + categorical]
+        joint_dataset = joint_dataset.rename(columns={'PINCP': 'label'})
     else:
         raise ValueError("Unknown dataset")
 
