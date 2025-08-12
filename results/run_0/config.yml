@@ -1,0 +1,59 @@
+ec:
+  __dictpath__: ec
+  __doc__: null
+  e5:
+    __dictpath__: ec.e5
+    __doc__: null
+    all_clfs:
+    - mlp
+    all_datasets:
+    - synthesis
+    all_methods:
+    - wachter
+    - lime_roar
+    - limels_roar
+    - rbr
+    kfold: 5
+    max_distance: 1.0
+    max_ins: 100
+    num_future: 100
+    num_samples: 200
+    params_to_vary:
+      delta_max:
+        default: 0.05
+        max: 0.2
+        min: 0.0
+        step: 0.02
+      delta_plus:
+        default: 0.05
+        max: 1.0
+        min: 0.0
+        step: 0.2
+      epsilon_op:
+        default: 1.5
+        max: 1.0
+        min: 0.0
+        step: 0.5
+      epsilon_pe:
+        default: 1.5
+        max: 1.0
+        min: 0.0
+        step: 0.5
+      none:
+        max: 0.0
+        min: 0.0
+        step: 0.1
+    perturb_radius:
+      german: 0.2
+      gmc: 0.2
+      income: 0.2
+      sba: 0.2
+      synthesis: 0.2
+    perturb_std: 1.0
+    rbr_params:
+      delta_plus: 0.2
+      epsilon_op: 0.0
+      epsilon_pe: 0.0
+      sigma: 1.0
+    roar_params:
+      delta_max: 0.2

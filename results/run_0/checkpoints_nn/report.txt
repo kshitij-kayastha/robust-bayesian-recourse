@@ -1,0 +1,13 @@
+mlp:
+  income:
+    append_arrival: true
+    arrival_ratio: 0.5
+    cur_acc_mean: 0.740725600408789
+    cur_acc_std: 0.002837699208362781
+    cur_auc_mean: 0.8057701249636734
+    cur_auc_std: 0.00397036033967184
+    shift_acc_mean: 0.7860168625447114
+    shift_acc_std: 0.006157272965288869
+    shift_auc_mean: 0.8610127264361137
+    shift_auc_std: 0.006234588795860671
+    train_shift_size: 0.8
